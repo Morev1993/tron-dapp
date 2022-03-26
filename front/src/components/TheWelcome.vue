@@ -1,15 +1,37 @@
-<script setup lang="ts">
-import WelcomeItem from './WelcomeItem.vue'
-import DocumentationIcon from './icons/IconDocumentation.vue'
-import ToolingIcon from './icons/IconTooling.vue'
-import EcosystemIcon from './icons/IconEcosystem.vue'
-import CommunityIcon from './icons/IconCommunity.vue'
-import SupportIcon from './icons/IconSupport.vue'
+<script lang="ts">
+
+type TronWebWindow = Window & {
+  tronWeb: any;
+};
+
+
+export default {
+  data() {
+    return {
+      count: 1
+    }
+  },
+
+  methods: {
+    onSubmit: () => { 
+      const tronWeb = (window as unknown as TronWebWindow).tronWeb;
+      if (tronWeb && tronWeb.defaultAddress.base58) {
+        console.log(tronWeb.defaultAddress.base58);
+      }
+    }
+  },
+
+  // `mounted` is a lifecycle hook which we will explain later
+  mounted() {
+    // `this` refers to the component instance.
+    // data can be mutated as well
+    this.count = 2
+  }
+}
 </script>
 
 <template>
-  <form>
-    <SupportIcon/>
+  <form @submit.prevent="onSubmit">
     <label class="block mb-3">
       <span class="text-gray-700">Address</span>
       <input type="text" class="mt-1 block w-full" placeholder="">
