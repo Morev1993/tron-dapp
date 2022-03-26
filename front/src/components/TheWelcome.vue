@@ -9,6 +9,7 @@ import SupportIcon from './icons/IconSupport.vue'
 
 <template>
   <form>
+    <SupportIcon/>
     <label class="block mb-3">
       <span class="text-gray-700">Address</span>
       <input type="text" class="mt-1 block w-full" placeholder="">
