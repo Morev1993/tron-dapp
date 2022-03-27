@@ -1,8 +1,6 @@
 <script lang="ts">
 
-type TronWebWindow = Window & {
-  tronWeb: any;
-};
+import {getTronWeb} from '../services/tronLink';
 
 
 export default {
@@ -14,10 +12,9 @@ export default {
 
   methods: {
     onSubmit: () => { 
-      const tronWeb = (window as unknown as TronWebWindow).tronWeb;
-      if (tronWeb && tronWeb.defaultAddress.base58) {
-        console.log(tronWeb.defaultAddress.base58);
-      }
+      const tronWeb = getTronWeb();
+
+      console.log(tronWeb.defaultAddress.base58);
     }
   },
 
@@ -46,3 +43,11 @@ export default {
   </form>
 
 </template>
+
+  function getTronWeb() {
+    throw new Error('Function not implemented.')
+  }
+
+  function getTronWeb() {
+    throw new Error('Function not implemented.')
+  }
