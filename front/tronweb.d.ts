@@ -7,9 +7,8 @@
 
 /// <reference types="node" />
 declare module 'tronweb' {
-
   export class TronWeb {
-      constructor(e: any, r: any, ...args: any[]);
+      constructor(e: {[key: string]: any });
       defaultAddress: {
         base58: string;
       };

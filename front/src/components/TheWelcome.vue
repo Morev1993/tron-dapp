@@ -11,10 +11,12 @@ export default {
   },
 
   methods: {
-    onSubmit: () => { 
+    onSubmit: async () => { 
       const tronWeb = getTronWeb();
 
-      console.log(tronWeb.defaultAddress.base58);
+      const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
+
+      console.log(account);
     }
   },
 
