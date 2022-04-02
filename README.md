@@ -24,3 +24,6 @@ References:
 https://erc20faucet.com/ ( it’s our product ) github
 
 https://docs.openzeppelin.com/contracts/4.x/wizard - great tool, but it doesn’t allow people to deploy right from there( no metamask integration )
+
+
+https://developers.tron.network/reference/tronweb-object

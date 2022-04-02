@@ -11,6 +11,7 @@ declare module 'tronweb' {
       constructor(e: {[key: string]: any });
       defaultAddress: {
         base58: string;
+        hex: string;
       };
       contract(...args: any[]): any;
       currentProvider(): any;
