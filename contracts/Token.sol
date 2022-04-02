@@ -1,23 +1,26 @@
-// 0.5.1-c8a2
-// Enable optimization
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
+contract MyToken is ERC20, Ownable {
+    uint8 private _decimals;
 
-/**
- * @title SimpleToken
- * @dev Very simple ERC20 Token example, where all tokens are pre-assigned to the creator.
- * Note they can later distribute these tokens as they wish using `transfer` and other
- * `ERC20` functions.
- */
-contract Token is ERC20, ERC20Detailed {
-
-    /**
-     * @dev Constructor that gives msg.sender all of existing tokens.
-     */
-    constructor () public ERC20Detailed("GFC", "GFC", 6) {
-        _mint(msg.sender, 10000 * (10 ** uint256(decimals())));
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
+        _setupDecimals(decimals_);
     }
+
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+
+    function _setupDecimals(uint8 decimals_) public onlyOwner {
+        _decimals = decimals_;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
+    }
+
 }
