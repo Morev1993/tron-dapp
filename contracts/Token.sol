@@ -15,12 +15,11 @@ contract MyToken is ERC20, Ownable {
         _mint(to, amount);
     }
 
-    function _setupDecimals(uint8 decimals_) public onlyOwner {
-        _decimals = decimals_;
-    }
-
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
-
+    
+    function _setupDecimals(uint8 decimals_) private onlyOwner {
+        _decimals = decimals_;
+    }
 }
