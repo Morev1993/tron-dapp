@@ -11,21 +11,22 @@ import VueToast from 'vue-toast-notification';
 //import 'vue-toast-notification/dist/theme-default.css';
 import 'vue-toast-notification/dist/theme-sugar.css';
 
-
 declare global {
   interface Window {
     tronWeb: TronWeb;
   }
 }
 
-createApp(App).use(router).use(VueToast,  {
-    // One of the options
-    position: 'top'
+const app = createApp(App);
+
+app.use(router).use(VueToast,  {
+  position: 'top'
 }).mount('#app');
 
-// let instance = app.$toast.open('You did it!');
 
-// Force dismiss specific toast
-// instance.dismiss();
-// // Dismiss all opened toast immediately
-// app.$toast.clear();
+app.config.globalProperties.$filters = {
+  amount(value: number) {
+    var formatter = new Intl.NumberFormat('en-US');
+    return formatter.format(value);
+  }
+}

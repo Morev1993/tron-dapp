@@ -85,9 +85,8 @@ export default defineComponent({
       console.log('contractInstance', contractInstance);
 
       return await contractInstance.mint(address, amount).send({
-        feeLimit: 1e9,
-        callValue: 0,
-        shouldPollResponse: true
+        callValue: 1,
+        shouldPollResponse: false
       });
     },
     async onMint() { 
@@ -222,7 +221,7 @@ export default defineComponent({
         {{tokenAddress}}
       </dd>
     </div>
-    <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10 mt-5" v-if="account && tokenAddress">
+    <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10 mt-5" v-if="account">
     <div class="relative">
       <dt>
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
@@ -231,7 +230,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900">Balance</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-gray-500">
-        {{balance}}
+        {{$filters.amount(balance)}}
       </dd>
     </div>
     <div class="relative">
