@@ -6,6 +6,7 @@
  */
 
 /// <reference types="node" />
+
 declare module 'tronweb' {
   export class TronWeb {
       constructor(e: {[key: string]: any });

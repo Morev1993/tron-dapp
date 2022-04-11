@@ -11,8 +11,6 @@ import {abi, bytecode} from '@/abi/MyToken.json';
 async function deployContract(name: string, symbol: string, decimals: number): Promise<any> {
   const tronWeb = getTronWeb();
 
-  console.log(arguments);
-
   if (tronWeb) {
     const transaction = await tronWeb.transactionBuilder.createSmartContract({
       abi,
@@ -31,9 +29,26 @@ async function deployContract(name: string, symbol: string, decimals: number): P
   return null;
 }
 
+interface Data {
+  form: {
+    name: string | null,
+    decimals: number | null,
+    symbol: string | null,
+    amount: number | null,
+    address: string | null
+  };
+  account: string | null,
+  network: string | null,
+  balance: number | null,
+  tokenAddress: string | null,
+  tokenBalance: string | null,
+  transactionId: string | null
+
+}
+
 export default defineComponent({
   components: { GlobeAltIcon, SunIcon, StatusOnlineIcon, ServerIcon, CreditCardIcon },
-  data() {
+  data(): Data {
     return {
       form: {
         name: null,
@@ -72,11 +87,19 @@ export default defineComponent({
     async getTransaction(transactionId: string): Promise<any> {
       const tronWeb = getTronWeb();
 
+      if (!tronWeb) {
+        return null;
+      }
+
       return await tronWeb.trx.getTransaction(transactionId);
       
     },
     async getContract(tokenAddress: string): Promise<any> {
       const tronWeb = getTronWeb();
+
+      if (!tronWeb) {
+        return null;
+      }
 
       return await tronWeb.contract(abi, tokenAddress);
     },
@@ -91,9 +114,15 @@ export default defineComponent({
     },
     async onMint() { 
       try {
+        const {address, amount} = this.form;
+
         this.$toast.success('Proccessing...');
 
-        const res = await this.mint(this.tokenAddress as any, this.form.address as any, this.form.amount as any);
+        if (!this.tokenAddress || !address || !amount) {
+          throw new Error('No mandatory fields');
+        }
+
+        const res = await this.mint(this.tokenAddress, address, amount);
 
         console.log(res);
 
@@ -108,15 +137,17 @@ export default defineComponent({
     async onDeploy() { 
       
       // this.$toast.open('You did it!');
-      const tronWeb = getTronWeb();
-
-      if (!tronWeb) {
-        console.error('no tronlink');
-        return;
-      }
 
       try {
-        const {name, symbol, decimals, amount, address} = this.form;
+        const tronWeb = getTronWeb();
+        const {name, symbol, decimals} = this.form;
+
+        if (!tronWeb) {
+          throw new Error('No tronlink!');
+          return;
+        }
+
+
         const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
 
         this.account = account.address;
@@ -128,11 +159,10 @@ export default defineComponent({
 
         this.$toast.success('Proccessing...');
 
-        const res = await deployContract(name as any, symbol as any, decimals as any);
+        const res = await deployContract(name, symbol, decimals);
         console.log('contract', res);
 
         this.$toast.clear();
-
         this.$toast.success('Keep on swinging...');
 
         const transaction = await this.getTransactionDelayed(res.txid, 1000);
@@ -140,6 +170,10 @@ export default defineComponent({
         this.$toast.clear();
 
         this.tokenAddress = transaction.contract_address;
+
+        if (!this.tokenAddress) {
+          throw new Error('No contract address');
+        }
 
         const contractInstance = await this.getContract(this.tokenAddress);
         console.log('contractInstance', contractInstance);
@@ -170,28 +204,28 @@ export default defineComponent({
   <div>
     <form @submit.prevent="onDeploy">
     <label class="block mb-3">
-      <span class="text-gray-700">Name of token</span>
+      <span class="text-gray-700 dark:text-white">Name of token</span>
       <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.name" required>
     </label>
     <label class="block mb-3">
-      <span class="text-gray-700">Decimals</span>
+      <span class="text-gray-700 dark:text-white">Decimals</span>
       <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.decimals" required>
     </label>
     <label class="block mb-3">
-      <span class="text-gray-700">Symbol</span>
+      <span class="text-gray-700 dark:text-white">Symbol</span>
       <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.symbol" required>
     </label>
     <label class="block mb-3">
-      <span class="text-gray-700">Amount</span>
+      <span class="text-gray-700 dark:text-white">Amount</span>
       <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.amount">
     </label>
     <label class="block mb-3">
-      <span class="text-gray-700">Address</span>
+      <span class="text-gray-700dark:text-white ">Address</span>
       <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.address">
     </label>
     <div class="mt-6 flex flex justify-end">
       <button v-if="tokenAddress" type="button" class="h-10 px-6 font-semibold rounded-md border border-slate-200 text-slate-900" @click="onMint">Mint tokens</button>
-      <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-black text-white">Deploy</button>
+      <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-black dark:bg-white text-white dark:text-black">Deploy</button>
     </div>
   </form>
   </div>
