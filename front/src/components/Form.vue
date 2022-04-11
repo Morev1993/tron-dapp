@@ -144,9 +144,7 @@ export default defineComponent({
 
         if (!tronWeb) {
           throw new Error('No tronlink!');
-          return;
         }
-
 
         const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
 
