@@ -97,12 +97,12 @@ export default defineComponent({
         amount: null,
         address: null
       },
-      account: 'TX6MF6VavKBxVEQpB5vrJJZYF34WcwjKuJ',
-      // account: null,
+      // account: 'TX6MF6VavKBxVEQpB5vrJJZYF34WcwjKuJ',
+      account: null,
       balance: null,
       network: null,
-      tokenAddress: '414a69bdfe2df5e2df2811b616eb9cf174b18880d4',
-      // tokenAddress: null,
+      // tokenAddress: '414a69bdfe2df5e2df2811b616eb9cf174b18880d4',
+      tokenAddress: null,
       tokenBalance: null,
       transactionId: null,
 
@@ -194,7 +194,7 @@ export default defineComponent({
         const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
 
         this.account = account.address;
-        this.balance = account.balance;
+        this.balance = tronWeb.fromSun(account.balance);
 
         if (!name || !symbol || !decimals) {
           return;
@@ -311,7 +311,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Balance</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{$filters.amount(balance)}}
+        {{$filters.amount(balance)}} TRX
       </dd>
     </div>
     <div class="relative">
