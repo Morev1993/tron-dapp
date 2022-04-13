@@ -1,11 +1,13 @@
 <script lang="ts">
 
 import { defineComponent } from 'vue';
+import useVuelidate from '@vuelidate/core'
+import { required } from '@vuelidate/validators'
+
 import { ServerIcon, GlobeAltIcon, SunIcon, StatusOnlineIcon, CreditCardIcon } from '@heroicons/vue/outline'
 
 
 import {getTronWeb} from '../services/tronLink';
-
 import {abi, bytecode} from '@/abi/MyToken.json';
 
 async function deployContract(name: string, symbol: string, decimals: number): Promise<any> {
@@ -46,8 +48,28 @@ interface Data {
 
 }
 
+export function validTrx20(address: string): boolean {
+  return /^T[A-Za-z1-9]{33}$/.test(address);
+
+}
+
 export default defineComponent({
   components: { GlobeAltIcon, SunIcon, StatusOnlineIcon, ServerIcon, CreditCardIcon },
+  setup () {
+    return { v$: useVuelidate() }
+  },
+  validations() {
+    return {
+      form: {
+        address: {
+            required, trxValidation: {
+              $validator: validTrx20, 
+              $message: 'Invalid address'
+            }
+        },
+      },
+    }
+  },
   data(): Data {
     return {
       form: {
@@ -135,7 +157,12 @@ export default defineComponent({
       }
     },
     async onDeploy() { 
-      
+      const isFormCorrect = await this.v$.$validate()
+      // you can show some extra alert to the user or just leave the each field to show it's `$errors`.
+      if (!isFormCorrect) return;
+      // actually submit form
+
+
       // this.$toast.open('You did it!');
 
       try {
@@ -162,6 +189,8 @@ export default defineComponent({
 
         this.$toast.clear();
         this.$toast.success('Keep on swinging...');
+
+        this.transactionId = res.txid;
 
         const transaction = await this.getTransactionDelayed(res.txid, 1000);
 
@@ -198,47 +227,50 @@ export default defineComponent({
 </script>
 
 <template>
-<div class="md:grid md:grid-cols-3 md:gap-x-16 md:gap-y-10 mt-20">
+<div class="md:grid md:grid-cols-3 md:gap-x-16 md:gap-y-10 mt-5">
   <div>
     <form @submit.prevent="onDeploy">
     <label class="block mb-3">
       <span class="text-gray-700 dark:text-white">Name of token</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.name" required>
+      <input type="text" class="mt-1 block w-full rounded-md border-4 border-indigo-400 focus:border-indigo-500 disabled:border-lime-500 text-black" placeholder="" v-model="form.name" :disabled="!!tokenAddress">
     </label>
     <label class="block mb-3">
       <span class="text-gray-700 dark:text-white">Decimals</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.decimals" required>
+      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="form.decimals" :disabled="!!tokenAddress">
     </label>
     <label class="block mb-3">
       <span class="text-gray-700 dark:text-white">Symbol</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.symbol" required>
+      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="form.symbol" :disabled="!!tokenAddress">
     </label>
     <label class="block mb-3">
       <span class="text-gray-700 dark:text-white">Amount</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.amount">
+      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="form.amount">
     </label>
-    <label class="block mb-3">
+    <label class="block mb-3" :class="{ error: v$.form.address.$errors.length }">
       <span class="text-gray-700dark:text-white ">Address</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="" v-model="form.address">
+      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="v$.form.address.$model">
+      <div class="text-red-600 mt-1" v-if="v$.form.address.$errors[0]">
+        {{ v$.form.address.$errors[0].$message }}
+      </div>
     </label>
     <div class="mt-6 flex flex justify-end">
-      <button v-if="tokenAddress" type="button" class="h-10 px-6 font-semibold rounded-md border border-slate-200 text-slate-900" @click="onMint">Mint tokens</button>
-      <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-black dark:bg-white text-white dark:text-black">Deploy</button>
+      <button v-if="tokenAddress" type="button" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white" @click="onMint">Mint tokens</button>
+      <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white">Deploy</button>
     </div>
   </form>
   </div>
   <div class="col-span-2">
     <div class="mb-5">
-      <h1>TRX Data</h1>
+      <h1 class="dark:text-white">TRX Data</h1>
     </div>
     <div class="relative mb-10" v-if="account">
       <dt>
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
           <ServerIcon class="h-6 w-6" aria-hidden="true" />
         </div>
-        <p class="ml-16 text-lg leading-6 font-medium text-gray-900">TRON account</p>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">TRON account</p>
       </dt>
-      <dd class="mt-2 ml-16 text-base text-gray-500">
+      <dd class="mt-2 ml-16 text-base text-lime-500">
         {{account}}
       </dd>
     </div>
@@ -247,10 +279,21 @@ export default defineComponent({
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
           <StatusOnlineIcon class="h-6 w-6" aria-hidden="true" />
         </div>
-        <p class="ml-16 text-lg leading-6 font-medium text-gray-900">Token Address</p>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Token Address</p>
       </dt>
-      <dd class="mt-2 ml-16 text-base text-gray-500">
+      <dd class="mt-2 ml-16 text-base text-lime-500">
         {{tokenAddress}}
+      </dd>
+    </div>
+    <div class="relative mb-20" v-if="transactionId">
+      <dt>
+        <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+          <StatusOnlineIcon class="h-6 w-6" aria-hidden="true" />
+        </div>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">TransactionId</p>
+      </dt>
+      <dd class="mt-2 ml-16 text-base text-lime-500">
+        {{transactionId}}
       </dd>
     </div>
     <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10 mt-5" v-if="account">
@@ -259,9 +302,9 @@ export default defineComponent({
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
           <SunIcon class="h-6 w-6" aria-hidden="true" />
         </div>
-        <p class="ml-16 text-lg leading-6 font-medium text-gray-900">Balance</p>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Balance</p>
       </dt>
-      <dd class="mt-2 ml-16 text-base text-gray-500">
+      <dd class="mt-2 ml-16 text-base text-lime-500">
         {{$filters.amount(balance)}}
       </dd>
     </div>
@@ -270,10 +313,10 @@ export default defineComponent({
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
           <GlobeAltIcon class="h-6 w-6" aria-hidden="true" />
         </div>
-        <p class="ml-16 text-lg leading-6 font-medium text-gray-900">Network</p>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Network</p>
       </dt>
-      <dd class="mt-2 ml-16 text-base text-gray-500">
-        {{network}}
+      <dd class="mt-2 ml-16 text-base text-lime-500">
+        {{network || '-'}}
       </dd>
     </div>
     <div class="relative">
@@ -281,9 +324,9 @@ export default defineComponent({
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
           <CreditCardIcon class="h-6 w-6" aria-hidden="true" />
         </div>
-        <p class="ml-16 text-lg leading-6 font-medium text-gray-900">Token Balance</p>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Token Balance</p>
       </dt>
-      <dd class="mt-2 ml-16 text-base text-gray-500">
+      <dd class="mt-2 ml-16 text-base text-lime-500">
         {{tokenBalance}}
       </dd>
     </div>

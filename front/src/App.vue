@@ -1,20 +1,33 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import tronLogo from "@/assets/tron-logo.svg";
+
 </script>
 
 <template>
-  <RouterView />
+  <div class="header">
+    <img :src="tronLogo" width="200">
+  </div>
+  <div class="main">
+    <RouterView />
+  </div>
 </template>
 
 <style>
 @import '@/assets/base.css';
 
-#app {
+.main {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
 
   font-weight: normal;
+}
+
+.header {
+  background: white;
+  margin: 0 auto;
+  padding: .5rem 2rem;
 }
 
 </style>
