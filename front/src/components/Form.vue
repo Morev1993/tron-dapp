@@ -10,6 +10,12 @@ import { ServerIcon, GlobeAltIcon, SunIcon, StatusOnlineIcon, CreditCardIcon } f
 import {getTronWeb} from '../services/tronLink';
 import {abi, bytecode} from '@/abi/MyToken.json';
 
+import BaseInput from '@/ui/BaseInput.vue'
+import Error from '@/ui/Error.vue'
+import PreviewItem from '@/components/PreviewItem.vue'
+
+
+
 async function deployContract(name: string, symbol: string, decimals: number): Promise<any> {
   const tronWeb = getTronWeb();
 
@@ -54,13 +60,25 @@ export function validTrx20(address: string): boolean {
 }
 
 export default defineComponent({
-  components: { GlobeAltIcon, SunIcon, StatusOnlineIcon, ServerIcon, CreditCardIcon },
+  components: { GlobeAltIcon, SunIcon, StatusOnlineIcon, ServerIcon, CreditCardIcon, BaseInput, Error, PreviewItem },
   setup () {
     return { v$: useVuelidate() }
   },
   validations() {
     return {
       form: {
+        name: {
+          required,
+        },
+        symbol: {
+          required,
+        },
+        decimals: {
+          required,
+        },
+        amount: {
+          required,
+        },
         address: {
             required, trxValidation: {
               $validator: validTrx20, 
@@ -79,12 +97,12 @@ export default defineComponent({
         amount: null,
         address: null
       },
-      // account: 'TX6MF6VavKBxVEQpB5vrJJZYF34WcwjKuJ',
-      account: null,
+      account: 'TX6MF6VavKBxVEQpB5vrJJZYF34WcwjKuJ',
+      // account: null,
       balance: null,
       network: null,
-      // tokenAddress: '414a69bdfe2df5e2df2811b616eb9cf174b18880d4',
-      tokenAddress: null,
+      tokenAddress: '414a69bdfe2df5e2df2811b616eb9cf174b18880d4',
+      // tokenAddress: null,
       tokenBalance: null,
       transactionId: null,
 
@@ -230,29 +248,26 @@ export default defineComponent({
 <div class="md:grid md:grid-cols-3 md:gap-x-16 md:gap-y-10 mt-5">
   <div>
     <form @submit.prevent="onDeploy">
-    <label class="block mb-3">
-      <span class="text-gray-700 dark:text-white">Name of token</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-4 border-indigo-400 focus:border-indigo-500 disabled:border-lime-500 text-black" placeholder="" v-model="form.name" :disabled="!!tokenAddress">
-    </label>
-    <label class="block mb-3">
-      <span class="text-gray-700 dark:text-white">Decimals</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="form.decimals" :disabled="!!tokenAddress">
-    </label>
-    <label class="block mb-3">
-      <span class="text-gray-700 dark:text-white">Symbol</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="form.symbol" :disabled="!!tokenAddress">
-    </label>
-    <label class="block mb-3">
-      <span class="text-gray-700 dark:text-white">Amount</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="form.amount">
-    </label>
-    <label class="block mb-3" :class="{ error: v$.form.address.$errors.length }">
-      <span class="text-gray-700dark:text-white ">Address</span>
-      <input type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black" placeholder="" v-model="v$.form.address.$model">
-      <div class="text-red-600 mt-1" v-if="v$.form.address.$errors[0]">
-        {{ v$.form.address.$errors[0].$message }}
-      </div>
-    </label>
+    <div class="mb-3">
+      <BaseInput label="Name of token" v-model="form.name"></BaseInput>
+      <Error :message="v$.form.name?.$errors[0]?.$message"></Error>
+    </div>
+    <div class="mb-3">
+      <BaseInput label="Decimals" v-model="form.decimals"></BaseInput>
+      <Error :message="v$.form.decimals?.$errors[0]?.$message"></Error>
+    </div>
+    <div class="mb-3">
+      <BaseInput label="Symbol" v-model="form.symbol"></BaseInput>
+      <Error :message="v$.form.symbol?.$errors[0]?.$message"></Error>
+    </div>
+    <div class="mb-3">
+      <BaseInput label="Amount" v-model="form.amount"></BaseInput>
+      <Error :message="v$.form.amount?.$errors[0]?.$message"></Error>
+    </div>
+    <div class="mb-3">
+      <BaseInput label="Address" v-model="form.address"></BaseInput>
+      <Error :message="v$.form.address?.$errors[0]?.$message"></Error>
+    </div>
     <div class="mt-6 flex flex justify-end">
       <button v-if="tokenAddress" type="button" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white" @click="onMint">Mint tokens</button>
       <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white">Deploy</button>
@@ -263,18 +278,9 @@ export default defineComponent({
     <div class="mb-5">
       <h1 class="dark:text-white">TRX Data</h1>
     </div>
-    <div class="relative mb-10" v-if="account">
-      <dt>
-        <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-          <ServerIcon class="h-6 w-6" aria-hidden="true" />
-        </div>
-        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">TRON account</p>
-      </dt>
-      <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{account}}
-      </dd>
-    </div>
-    <div class="relative mb-20" v-if="tokenAddress">
+    <PreviewItem class="mb-10" title="TRON account" :value="account" v-if="account"></PreviewItem>
+    <div v-else>No data</div>
+    <div class="relative mb-10" v-if="tokenAddress">
       <dt>
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
           <StatusOnlineIcon class="h-6 w-6" aria-hidden="true" />
