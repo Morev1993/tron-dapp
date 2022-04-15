@@ -1,6 +1,6 @@
 <script lang="ts">
 
-import { defineComponent, onBeforeMount } from 'vue';
+import { defineComponent } from 'vue';
 import useVuelidate from '@vuelidate/core'
 import { required } from '@vuelidate/validators'
 
@@ -18,7 +18,6 @@ import type { TronLinkParams } from '@/models/tronLink';
 import { networkConfig } from '@/networkConfig';
 
 interface Data {
-  tronLink: TronLinkParams | null,
   form: {
     name: string | null,
     decimals: number | null,
@@ -66,7 +65,6 @@ export default defineComponent({
   },
   data(): Data {
     return {
-      tronLink: null,
       form: {
         name: null,
         decimals: null,
@@ -118,7 +116,7 @@ export default defineComponent({
         this.$toast.success('Everything is good');
       } catch (e) {
         console.log(e);
-        this.$toast.error(e.error);
+        this.$toast.error(e);
       }
     },
     async onDeploy() { 
@@ -127,16 +125,13 @@ export default defineComponent({
 
       try {
         const {name, symbol, decimals} = this.form;
+        const tronLink = await getTronLink()
 
-        if (!this.tronLink) {
+        if (!tronLink) {
           throw new Error('No tronlink!');
         }
 
-        const accounts = await this.tronLink.request({method: 'tron_requestAccounts'});
-
-        console.log(accounts, this.tronLink);
-
-        const {tronWeb} = this.tronLink;
+        const { tronWeb } = tronLink;
 
         const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
 
@@ -186,14 +181,13 @@ export default defineComponent({
   },
   async mounted() {
     const tronLink = await getTronLink();
-    this.tronLink = tronLink;
 
-    if (!this.tronLink) {
+    if (!tronLink) {
       return;
     }
 
-    this.network = this.tronLink.tronWeb.fullNode.host;
-    console.log(this.network, this.tronLink);
+    this.network = tronLink.tronWeb.fullNode.host;
+    console.log(this.network, tronLink);
   }
 })
 </script>

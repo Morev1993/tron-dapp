@@ -3,7 +3,7 @@ import {abi, bytecode} from '@/abi/MyToken.json';
 
 
 export async function deployContract(name: string, symbol: string, decimals: number): Promise<any> {
-  const tronLink = await getTronLink();
+  const tronLink = window.tronLink;
 
   if (tronLink) {
     const transaction = await tronLink.tronWeb.transactionBuilder.createSmartContract({
