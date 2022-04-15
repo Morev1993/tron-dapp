@@ -7,35 +7,13 @@ import { required } from '@vuelidate/validators'
 import { ServerIcon, GlobeAltIcon, SunIcon, StatusOnlineIcon, CreditCardIcon } from '@heroicons/vue/outline'
 
 
-import {getTronWeb} from '../services/tronLink';
-import {abi, bytecode} from '@/abi/MyToken.json';
+import {getTronLink} from '../services/tronLink';
 
-import BaseInput from '@/ui/BaseInput.vue'
-import Error from '@/ui/Error.vue'
+import BaseInput from '@/components/BaseInput.vue'
+import Error from '@/components/Error.vue'
 import PreviewItem from '@/components/PreviewItem.vue'
-
-
-
-async function deployContract(name: string, symbol: string, decimals: number): Promise<any> {
-  const tronWeb = getTronWeb();
-
-  if (tronWeb) {
-    const transaction = await tronWeb.transactionBuilder.createSmartContract({
-      abi,
-      bytecode,
-      feeLimit: 1e9,
-      userFeePercentage: 10,
-      originEnergyLimit: 10,
-      parameters: [name, symbol, +decimals]
-    });
-
-    const signedTransaction = await tronWeb.trx.sign(transaction);
-
-    return await tronWeb.trx.sendRawTransaction(signedTransaction); 
-  }
-
-  return null;
-}
+import { deployContract, getContract, getTransactionDelayed, mint } from '@/services/contract';
+import { validTrx20 } from '@/utils/validators';
 
 interface Data {
   form: {
@@ -51,11 +29,6 @@ interface Data {
   tokenAddress: string | null,
   tokenBalance: string | null,
   transactionId: string | null
-
-}
-
-export function validTrx20(address: string): boolean {
-  return /^T[A-Za-z1-9]{33}$/.test(address);
 
 }
 
@@ -110,48 +83,6 @@ export default defineComponent({
   },
 
   methods: {
-    async getTransactionDelayed(transactionId: string, delay = 300): Promise<any> {
-      const promise = new Promise((resolve, reject) => {
-        setTimeout(() => {
-          this.getTransaction(transactionId).then((res) => {
-            resolve(res);
-          }, (err) => {
-            reject(err);
-          })
-          
-        }, delay);
-      });
-
-      return promise;
-    },
-    async getTransaction(transactionId: string): Promise<any> {
-      const tronWeb = getTronWeb();
-
-      if (!tronWeb) {
-        return null;
-      }
-
-      return await tronWeb.trx.getTransaction(transactionId);
-      
-    },
-    async getContract(tokenAddress: string): Promise<any> {
-      const tronWeb = getTronWeb();
-
-      if (!tronWeb) {
-        return null;
-      }
-
-      return await tronWeb.contract(abi, tokenAddress);
-    },
-    async mint(tokenAddress: string, address: string, amount: number): Promise<any> {
-      const contractInstance = await this.getContract(tokenAddress);
-      console.log('contractInstance', contractInstance);
-
-      return await contractInstance.mint(address, amount).send({
-        callValue: 1,
-        shouldPollResponse: false
-      });
-    },
     async onMint() { 
       try {
         const {address, amount} = this.form;
@@ -162,7 +93,7 @@ export default defineComponent({
           throw new Error('No mandatory fields');
         }
 
-        const res = await this.mint(this.tokenAddress, address, amount);
+        const res = await mint(this.tokenAddress, address, amount);
 
         console.log(res);
 
@@ -176,22 +107,26 @@ export default defineComponent({
     },
     async onDeploy() { 
       const isFormCorrect = await this.v$.$validate()
-      // you can show some extra alert to the user or just leave the each field to show it's `$errors`.
       if (!isFormCorrect) return;
-      // actually submit form
-
-
-      // this.$toast.open('You did it!');
 
       try {
-        const tronWeb = getTronWeb();
+        const tronLink = await getTronLink();
         const {name, symbol, decimals} = this.form;
 
-        if (!tronWeb) {
+        if (!tronLink) {
           throw new Error('No tronlink!');
         }
 
+        const accounts = await tronLink.request({method: 'tron_requestAccounts'});
+
+        console.log(accounts, tronLink);
+
+        const {tronWeb} = tronLink;
+
         const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
+
+        console.log(account);
+        this.network = tronWeb.fullNode.host;
 
         this.account = account.address;
         this.balance = tronWeb.fromSun(account.balance);
@@ -210,7 +145,7 @@ export default defineComponent({
 
         this.transactionId = res.txid;
 
-        const transaction = await this.getTransactionDelayed(res.txid, 1000);
+        const transaction = await getTransactionDelayed(res.txid, 1000);
 
         this.$toast.clear();
 
@@ -220,7 +155,7 @@ export default defineComponent({
           throw new Error('No contract address');
         }
 
-        const contractInstance = await this.getContract(this.tokenAddress);
+        const contractInstance = await getContract(this.tokenAddress);
         console.log('contractInstance', contractInstance);
 
         const balanceData = await contractInstance.balanceOf(this.account).call();

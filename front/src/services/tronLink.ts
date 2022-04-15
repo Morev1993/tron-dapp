@@ -1,9 +1,27 @@
-import type TronWeb from "tronweb";
+import type { TronLinkParams } from "@/models/tronLink";
 
-export function getTronWeb(): {[key: string]: any} | null {
-  if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
-    return window.tronWeb;
-  }
+export function getTronLink(): Promise<TronLinkParams | null>  {
+  return new Promise((resolve, reject) => {
+    if (window.tronLink) {
+      handleTronLink();
+    } else {
+      window.addEventListener('tronLink#initialized', handleTronLink, {
+        once: true,
+      });
 
-  return null;
+      setTimeout(handleTronLink, 3000);
+    }
+
+    function handleTronLink() {
+      const { tronLink } = window;
+      if (tronLink) {
+        resolve(tronLink);
+        console.log('tronLink successfully detected!');
+      } else {
+        console.log('Please install TronLink-Extension!');
+        reject(null);
+      }
+    }
+  })
+  
 }
