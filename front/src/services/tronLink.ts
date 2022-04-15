@@ -18,7 +18,7 @@ export function getTronLink(): Promise<TronLinkParams | null>  {
         resolve(tronLink);
         console.log('tronLink successfully detected!');
       } else {
-        console.log('Please install TronLink-Extension!');
+        console.error('Please install TronLink-Extension!');
         reject(null);
       }
     }

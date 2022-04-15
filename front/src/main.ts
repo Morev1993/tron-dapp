@@ -11,6 +11,7 @@ import VueToast from 'vue-toast-notification';
 //import 'vue-toast-notification/dist/theme-default.css';
 import 'vue-toast-notification/dist/theme-sugar.css';
 import type { TronLinkParams } from './models/tronLink'
+import { createPinia } from 'pinia'
 declare global {
   interface Window {
     tronWeb: TronWeb;
@@ -23,10 +24,12 @@ appConfig();
 function appConfig() {
   const app = createApp(App);
 
-  app.use(router).use(VueToast,  {
+  app.use(router)
+  app.use(VueToast,  {
     position: 'top'
-  }).mount('#app');
-
+  })
+  app.use(createPinia())
+  app.mount('#app');
 
   app.config.globalProperties.$filters = {
     amount(value: number) {
@@ -35,10 +38,3 @@ function appConfig() {
     }
   }
 }
-
-window.addEventListener('message', function (e) {
-  if (e.data.message && e.data.message.action == "setNode") {
-    console.log("setNode event", e.data.message);
-    // location.reload();
-  }
-})

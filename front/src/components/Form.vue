@@ -1,6 +1,6 @@
 <script lang="ts">
 
-import { defineComponent } from 'vue';
+import { defineComponent, onBeforeMount } from 'vue';
 import useVuelidate from '@vuelidate/core'
 import { required } from '@vuelidate/validators'
 
@@ -14,8 +14,11 @@ import Error from '@/components/Error.vue'
 import PreviewItem from '@/components/PreviewItem.vue'
 import { deployContract, getContract, getTransactionDelayed, mint } from '@/services/contract';
 import { validTrx20 } from '@/utils/validators';
+import type { TronLinkParams } from '@/models/tronLink';
+import { networkConfig } from '@/networkConfig';
 
 interface Data {
+  tronLink: TronLinkParams | null,
   form: {
     name: string | null,
     decimals: number | null,
@@ -63,6 +66,7 @@ export default defineComponent({
   },
   data(): Data {
     return {
+      tronLink: null,
       form: {
         name: null,
         decimals: null,
@@ -79,6 +83,18 @@ export default defineComponent({
       tokenBalance: null,
       transactionId: null,
 
+    }
+  },
+  computed: {
+    networkName(): string {
+      return this.network ? networkConfig[this.network].name : '';
+    },
+    transactionLink(): string {
+      if (!this.network || !this.transactionId) {
+        return '';
+      }
+
+      return `${networkConfig[this.network].explorer}/#/transaction/${this.transactionId}`;
     }
   },
 
@@ -110,23 +126,21 @@ export default defineComponent({
       if (!isFormCorrect) return;
 
       try {
-        const tronLink = await getTronLink();
         const {name, symbol, decimals} = this.form;
 
-        if (!tronLink) {
+        if (!this.tronLink) {
           throw new Error('No tronlink!');
         }
 
-        const accounts = await tronLink.request({method: 'tron_requestAccounts'});
+        const accounts = await this.tronLink.request({method: 'tron_requestAccounts'});
 
-        console.log(accounts, tronLink);
+        console.log(accounts, this.tronLink);
 
-        const {tronWeb} = tronLink;
+        const {tronWeb} = this.tronLink;
 
         const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
 
         console.log(account);
-        this.network = tronWeb.fullNode.host;
 
         this.account = account.address;
         this.balance = tronWeb.fromSun(account.balance);
@@ -170,11 +184,16 @@ export default defineComponent({
         }
     }
   },
+  async mounted() {
+    const tronLink = await getTronLink();
+    this.tronLink = tronLink;
 
-  // `mounted` is a lifecycle hook which we will explain later
-  mounted() {
-    // `this` refers to the component instance.
-    // data can be mutated as well
+    if (!this.tronLink) {
+      return;
+    }
+
+    this.network = this.tronLink.tronWeb.fullNode.host;
+    console.log(this.network, this.tronLink);
   }
 })
 </script>
@@ -205,7 +224,7 @@ export default defineComponent({
     </div>
     <div class="mt-6 flex flex justify-end">
       <button v-if="tokenAddress" type="button" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white" @click="onMint">Mint tokens</button>
-      <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white">Deploy</button>
+      <button v-if="!tokenAddress" type="submit" class="h-10 px-6 font-semibold rounded-md bg-indigo-500 text-white">Deploy on {{networkName}}</button>
     </div>
   </form>
   </div>
@@ -234,7 +253,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">TransactionId</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{transactionId}}
+        <a :href="transactionLink" target="_blank">{{transactionId}}</a>
       </dd>
     </div>
     <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10 mt-5" v-if="account">
@@ -257,7 +276,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Network</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{network || '-'}}
+        {{networkName || '-'}}
       </dd>
     </div>
     <div class="relative">
@@ -268,7 +287,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Token Balance</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{tokenBalance}}
+        {{tokenBalance || '-'}}
       </dd>
     </div>
   </dl>

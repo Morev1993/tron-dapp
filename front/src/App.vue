@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import tronLogo from "@/assets/tron-logo.svg";
+import { onBeforeMount } from 'vue';
+import { getTronLink } from './services/tronLink';
+
+onBeforeMount(async () => {
+  window.addEventListener('message', (e) => {
+    if (e.data.message && e.data.message.action == "setNode") {
+      console.log("setNode event", e.data.message);
+      location.reload();
+    }
+  })
+
+})
 
 </script>
 
