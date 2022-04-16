@@ -6,6 +6,7 @@ import { getTronLink } from './services/tronLink';
 
 onBeforeMount(async () => {
   window.addEventListener('message', (e) => {
+    // console.log('events', e);
     if (e.data.message && e.data.message.action == "setNode") {
       console.log("setNode event", e.data.message);
       location.reload();

@@ -18,6 +18,7 @@ import type { TronLinkParams } from '@/models/tronLink';
 import { networkConfig } from '@/networkConfig';
 
 interface Data {
+  tronLink: TronLinkParams | null
   form: {
     name: string | null,
     decimals: number | null,
@@ -25,7 +26,7 @@ interface Data {
     amount: number | null,
     address: string | null
   };
-  account: string | null,
+  accountAddress: string | null,
   network: string | null,
   balance: number | null,
   tokenAddress: string | null,
@@ -65,6 +66,7 @@ export default defineComponent({
   },
   data(): Data {
     return {
+      tronLink: null,
       form: {
         name: null,
         decimals: null,
@@ -72,8 +74,8 @@ export default defineComponent({
         amount: null,
         address: null
       },
-      // account: 'TX6MF6VavKBxVEQpB5vrJJZYF34WcwjKuJ',
-      account: null,
+      // accountAddress: 'TX6MF6VavKBxVEQpB5vrJJZYF34WcwjKuJ',
+      accountAddress: null,
       balance: null,
       network: null,
       // tokenAddress: '414a69bdfe2df5e2df2811b616eb9cf174b18880d4',
@@ -92,11 +94,19 @@ export default defineComponent({
         return '';
       }
 
-      return `${networkConfig[this.network].explorer}/#/transaction/${this.transactionId}`;
-    }
+      return `${networkConfig[this.network].explorer.tx}/${this.transactionId}`;
+    },
+
   },
 
   methods: {
+    addressLink(address: string): string {
+      if (!this.network) {
+        return '';
+      }
+
+      return `${networkConfig[this.network].explorer.address}/${address}`;
+    },
     async onMint() { 
       try {
         const {address, amount} = this.form;
@@ -107,9 +117,12 @@ export default defineComponent({
           throw new Error('No mandatory fields');
         }
 
-        const res = await mint(this.tokenAddress, address, amount);
+        const contractInstance = await getContract(this.tokenAddress);
+        console.log('contractInstance', contractInstance);
 
-        console.log(res);
+        const res = await mint(this.tokenAddress, address, this.tronLink?.tronWeb.toSun(amount) );
+
+        console.log('mint result', res);
 
         this.$toast.clear();
 
@@ -125,50 +138,54 @@ export default defineComponent({
 
       try {
         const {name, symbol, decimals} = this.form;
-        const tronLink = await getTronLink()
 
-        if (!tronLink) {
+        if (!this.tronLink) {
           throw new Error('No tronlink!');
         }
-
-        const { tronWeb } = tronLink;
-
-        const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
-
-        console.log(account);
-
-        this.account = account.address;
-        this.balance = tronWeb.fromSun(account.balance);
 
         if (!name || !symbol || !decimals) {
           return;
         }
 
+        const { tronWeb } = this.tronLink;
+
+        const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
+
+        this.accountAddress = tronWeb.address.fromHex(account.address);
+        this.balance = tronWeb.fromSun(account.balance);
+
         this.$toast.success('Proccessing...');
 
         const res = await deployContract(name, symbol, decimals);
-        console.log('contract', res);
-
-        this.$toast.clear();
-        this.$toast.success('Keep on swinging...');
 
         this.transactionId = res.txid;
+        console.log('deployed contract', res, this.transactionId);
 
         const transaction = await getTransactionDelayed(res.txid, 1000);
 
         this.$toast.clear();
 
-        this.tokenAddress = transaction.contract_address;
+        this.tokenAddress = tronWeb.address.fromHex(transaction.contract_address);
 
         if (!this.tokenAddress) {
           throw new Error('No contract address');
         }
 
         const contractInstance = await getContract(this.tokenAddress);
+
         console.log('contractInstance', contractInstance);
 
-        const balanceData = await contractInstance.balanceOf(this.account).call();
-        const symbolData = await contractInstance.symbol().call()
+        contractInstance['Transfer']().watch((err: unknown, eventResult: unknown) => {
+          if (err) {
+            return console.error('Error with "method" event:', err);
+          }
+          if (eventResult) { 
+            console.log('eventResult:', eventResult);
+          }
+        });
+
+        const balanceData = await contractInstance.balanceOf(this.accountAddress).call();
+        const symbolData = await contractInstance.symbol().call();
 
         this.tokenBalance = `${tronWeb.BigNumber(balanceData._hex).toNumber()} ${symbolData}`;
 
@@ -186,8 +203,9 @@ export default defineComponent({
       return;
     }
 
-    this.network = tronLink.tronWeb.fullNode.host;
-    console.log(this.network, tronLink);
+    this.tronLink = tronLink;
+    this.network = this.tronLink.tronWeb.fullNode.host;
+    console.log(this.network, this.tronLink);
   }
 })
 </script>
@@ -226,7 +244,17 @@ export default defineComponent({
     <div class="mb-5">
       <h1 class="dark:text-white">TRX Data</h1>
     </div>
-    <PreviewItem class="mb-10" title="TRON account" :value="account" v-if="account"></PreviewItem>
+    <div class="relative mb-10" v-if="accountAddress">
+      <dt>
+        <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+          <ServerIcon class="h-6 w-6" aria-hidden="true" />
+        </div>
+        <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Account</p>
+      </dt>
+      <dd class="mt-2 ml-16 text-base text-lime-500">
+        <a :href="addressLink(accountAddress)" target="_blank">{{accountAddress}}</a>
+      </dd>
+    </div>
     <div v-else>No data</div>
     <div class="relative mb-10" v-if="tokenAddress">
       <dt>
@@ -236,7 +264,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Token Address</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{tokenAddress}}
+        <a :href="addressLink(tokenAddress)" target="_blank">{{tokenAddress}}</a>
       </dd>
     </div>
     <div class="relative mb-20" v-if="transactionId">
@@ -250,7 +278,7 @@ export default defineComponent({
         <a :href="transactionLink" target="_blank">{{transactionId}}</a>
       </dd>
     </div>
-    <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10 mt-5" v-if="account">
+    <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10 mt-5" v-if="accountAddress">
     <div class="relative">
       <dt>
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">

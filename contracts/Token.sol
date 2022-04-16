@@ -12,7 +12,7 @@ contract MyToken is ERC20, Ownable {
     }
 
     function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
+        _mint(to, amount * (10 ** uint256(_decimals)));
     }
 
     function decimals() public view virtual override returns (uint8) {
