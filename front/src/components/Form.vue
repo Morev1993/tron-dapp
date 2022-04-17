@@ -18,7 +18,8 @@ import type { TronLinkParams } from '@/models/tronLink';
 import { networkConfig } from '@/networkConfig';
 
 interface Data {
-  tronLink: TronLinkParams | null
+  tronLink: TronLinkParams | null,
+  isLoading: boolean,
   form: {
     name: string | null,
     decimals: number | null,
@@ -30,8 +31,9 @@ interface Data {
   network: string | null,
   balance: number | null,
   tokenAddress: string | null,
-  tokenBalance: string | null,
-  transactionId: string | null
+  tokenBalance: number | null,
+  transactionId: string | null,
+  symbol: string | null
 
 }
 
@@ -67,6 +69,7 @@ export default defineComponent({
   data(): Data {
     return {
       tronLink: null,
+      isLoading: false,
       form: {
         name: null,
         decimals: null,
@@ -82,6 +85,7 @@ export default defineComponent({
       tokenAddress: null,
       tokenBalance: null,
       transactionId: null,
+      symbol: null
 
     }
   },
@@ -107,7 +111,36 @@ export default defineComponent({
 
       return `${networkConfig[this.network].explorer.address}/${address}`;
     },
+    async updateTokenBalance(contractInstance: any): Promise<void> {
+      const decimalsData = await contractInstance.decimals().call();
+      const balanceData = await contractInstance.balanceOf(this.accountAddress).call();
+      const value = this.tronLink?.tronWeb.BigNumber(balanceData._hex).toNumber();
+
+      this.tokenBalance = this.tronLink?.tronWeb.fromSun(value) / Math.pow(10, decimalsData);
+    },
+    async updateAccountBalance(): Promise<void> {
+      const account = await this.tronLink?.tronWeb.trx.getAccount(this.accountAddress);
+
+      this.balance = this.tronLink?.tronWeb.fromSun(account.balance);
+    },
+    handleEvents(contractInstance: any) {
+      contractInstance['Transfer']().watch(async (err: unknown, eventResult: unknown) => {
+        if (err) {
+            console.error('Error with "method" event:', err);
+            throw new Error('Error with "method" event');
+        }
+        if (eventResult) { 
+          console.log('eventResult:', eventResult);
+          await this.updateAccountBalance();
+          await this.updateTokenBalance(contractInstance);
+        }
+
+        this.isLoading = false;
+      });
+    },
     async onMint() { 
+      this.isLoading = true;
+
       try {
         const {address, amount} = this.form;
 
@@ -128,13 +161,16 @@ export default defineComponent({
 
         this.$toast.success('Everything is good');
       } catch (e) {
-        console.log(e);
+        console.error(e);
         this.$toast.error(e);
+        this.isLoading = false;
       }
     },
     async onDeploy() { 
       const isFormCorrect = await this.v$.$validate()
       if (!isFormCorrect) return;
+
+      this.isLoading = true;
 
       try {
         const {name, symbol, decimals} = this.form;
@@ -149,19 +185,21 @@ export default defineComponent({
 
         const { tronWeb } = this.tronLink;
 
-        const account = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
+        this.accountAddress = tronWeb.defaultAddress.base58;
 
-        this.accountAddress = tronWeb.address.fromHex(account.address);
-        this.balance = tronWeb.fromSun(account.balance);
+        await this.updateAccountBalance();
 
         this.$toast.success('Proccessing...');
 
         const res = await deployContract(name, symbol, decimals);
 
         this.transactionId = res.txid;
-        console.log('deployed contract', res, this.transactionId);
 
-        const transaction = await getTransactionDelayed(res.txid, 1000);
+        if (!this.transactionId) {
+          throw new Error('No transaction');
+        }
+
+        const transaction = await getTransactionDelayed(this.transactionId, 1000);
 
         this.$toast.clear();
 
@@ -173,30 +211,20 @@ export default defineComponent({
 
         const contractInstance = await getContract(this.tokenAddress);
 
+        this.symbol = await contractInstance.symbol().call();
+
         console.log('contractInstance', contractInstance);
 
-        contractInstance['Transfer']().watch((err: unknown, eventResult: unknown) => {
-          if (err) {
-            return console.error('Error with "method" event:', err);
-          }
-          if (eventResult) { 
-            console.log('eventResult:', eventResult);
-          }
-        });
+        this.handleEvents(contractInstance);
 
-        const decimalsData = await contractInstance.decimals().call();
-
-        const balanceData = await contractInstance.balanceOf(this.accountAddress).call();
-
-        const balanceFormatted = tronWeb.BigNumber(balanceData._hex).toNumber() / Math.pow(10, decimalsData);
-        const symbolData = await contractInstance.symbol().call();
-
-        this.tokenBalance = `${balanceFormatted} ${symbolData}`;
+        await this.updateTokenBalance(contractInstance);
 
         this.$toast.success('Everything is good');
 
+        this.isLoading = false;
         } catch(e) {
           this.$toast.error(e);
+          this.isLoading = false;
         }
     }
   },
@@ -260,6 +288,7 @@ export default defineComponent({
       </dd>
     </div>
     <div v-else>No data</div>
+    <div v-if="isLoading">Loading...</div>
     <div class="relative mb-10" v-if="tokenAddress">
       <dt>
         <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
@@ -313,7 +342,7 @@ export default defineComponent({
         <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">Token Balance</p>
       </dt>
       <dd class="mt-2 ml-16 text-base text-lime-500">
-        {{tokenBalance || '-'}}
+        {{tokenBalance}} {{symbol}}
       </dd>
     </div>
   </dl>
