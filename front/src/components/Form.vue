@@ -14,28 +14,8 @@ import Error from '@/components/Error.vue'
 import PreviewItem from '@/components/PreviewItem.vue'
 import { deployContract, getContract, getTransactionDelayed, mint } from '@/services/contract';
 import { validTrx20 } from '@/utils/validators';
-import type { TronLinkParams } from '@/models/tronLink';
 import { networkConfig } from '@/networkConfig';
-
-interface Data {
-  tronLink: TronLinkParams | null,
-  isLoading: boolean,
-  form: {
-    name: string | null,
-    decimals: number | null,
-    symbol: string | null,
-    amount: number | null,
-    address: string | null
-  };
-  accountAddress: string | null,
-  network: string | null,
-  balance: number | null,
-  tokenAddress: string | null,
-  tokenBalance: number | null,
-  transactionId: string | null,
-  symbol: string | null
-
-}
+import type { TronState } from '@/models/tronState';
 
 export default defineComponent({
   components: { GlobeAltIcon, SunIcon, StatusOnlineIcon, ServerIcon, CreditCardIcon, BaseInput, Error, PreviewItem },
@@ -52,7 +32,7 @@ export default defineComponent({
           required,
         },
         decimals: {
-          required,
+          required
         },
         amount: {
           required,
@@ -66,7 +46,7 @@ export default defineComponent({
       },
     }
   },
-  data(): Data {
+  data(): TronState {
     return {
       tronLink: null,
       isLoading: false,
