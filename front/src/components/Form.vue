@@ -184,10 +184,14 @@ export default defineComponent({
           }
         });
 
+        const decimalsData = await contractInstance.decimals().call();
+
         const balanceData = await contractInstance.balanceOf(this.accountAddress).call();
+
+        const balanceFormatted = tronWeb.BigNumber(balanceData._hex).toNumber() / Math.pow(10, decimalsData);
         const symbolData = await contractInstance.symbol().call();
 
-        this.tokenBalance = `${tronWeb.BigNumber(balanceData._hex).toNumber()} ${symbolData}`;
+        this.tokenBalance = `${balanceFormatted} ${symbolData}`;
 
         this.$toast.success('Everything is good');
 
